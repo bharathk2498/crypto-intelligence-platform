@@ -1,86 +1,109 @@
-'use client'
+use client
 
 import { useState } from 'react'
-import { Play, BarChart3, Settings, TrendingUp, TrendingDown, Info } from 'lucide-react'
-import { BacktestConfig, BacktestResult } from '@/lib/types'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart } from 'recharts'
+import { Play, TrendingUp, Clock, DollarSign, Target, AlertTriangle, Download, Save } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
+
+interface BacktestResult {
+  total_return: number
+  annualized_return: number
+  sharpe_ratio: number
+  sortino_ratio: number
+  max_drawdown: number
+  win_rate: number
+  profit_factor: number
+  num_trades: number
+  avg_win: number
+  avg_loss: number
+  largest_win: number
+  largest_loss: number
+}
 
 export default function BacktestPage() {
-  const [config, setConfig] = useState<BacktestConfig>({
+  const [isRunning, setIsRunning] = useState(false)
+  const [hasResults, setHasResults] = useState(false)
+  const [config, setConfig] = useState({
     strategy_type: 'momentum',
-    assets: ['bitcoin'],
-    start_date: '2024-01-01',
-    end_date: '2024-10-27',
-    initial_capital: 10000,
-    position_size: 1,
-    rebalance_frequency: 'monthly',
+    assets: ['bitcoin', 'ethereum'],
+    start_date: '2023-01-01',
+    end_date: '2024-12-31',
+    initial_capital: 100000,
+    position_size: 0.1,
+    rebalance_frequency: 'weekly',
     transaction_cost: 0.001,
-    slippage: 0.001,
-    stop_loss: undefined,
-    take_profit: undefined
+    slippage: 0.002,
+    stop_loss: 0.1,
+    take_profit: 0.2
   })
 
-  const [result, setResult] = useState<BacktestResult | null>(null)
-  const [isRunning, setIsRunning] = useState(false)
+  const [results, setResults] = useState<BacktestResult>({
+    total_return: 45.3,
+    annualized_return: 22.7,
+    sharpe_ratio: 1.85,
+    sortino_ratio: 2.34,
+    max_drawdown: -18.2,
+    win_rate: 62.5,
+    profit_factor: 2.4,
+    num_trades: 48,
+    avg_win: 4.2,
+    avg_loss: -2.1,
+    largest_win: 12.5,
+    largest_loss: -8.3
+  })
 
-  const runBacktest = async () => {
+  const equityCurve = Array.from({ length: 52 }, (_, i) => ({
+    week: i + 1,
+    value: 100000 * (1 + (results.total_return / 100) * (i / 52)),
+    benchmark: 100000 * (1 + 0.30 * (i / 52))
+  }))
+
+  const monthlyReturns = Array.from({ length: 12 }, (_, i) => ({
+    month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+    return: (Math.random() - 0.4) * 10
+  }))
+
+  async function runBacktest() {
     setIsRunning(true)
     
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, 3000))
     
-    const mockResult: BacktestResult = {
-      total_return: 45.2,
-      annualized_return: 52.3,
-      sharpe_ratio: 1.85,
-      max_drawdown: 18.5,
-      win_rate: 58.3,
-      profit_factor: 1.92,
-      num_trades: 24,
-      equity_curve: [
-        { date: '2024-01', value: 10000 },
-        { date: '2024-02', value: 10500 },
-        { date: '2024-03', value: 11200 },
-        { date: '2024-04', value: 10800 },
-        { date: '2024-05', value: 11500 },
-        { date: '2024-06', value: 12300 },
-        { date: '2024-07', value: 12100 },
-        { date: '2024-08', value: 13000 },
-        { date: '2024-09', value: 13800 },
-        { date: '2024-10', value: 14520 }
-      ],
-      trades: [
-        { date: '2024-01-15', asset: 'BTC', action: 'buy', price: 42000, quantity: 0.238, value: 10000 },
-        { date: '2024-02-10', asset: 'BTC', action: 'sell', price: 44500, quantity: 0.238, value: 10591, pnl: 591 },
-        { date: '2024-02-12', asset: 'BTC', action: 'buy', price: 44200, quantity: 0.240, value: 10591 }
-      ]
-    }
-    
-    setResult(mockResult)
+    setHasResults(true)
     setIsRunning(false)
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Strategy Backtester</h1>
-        <p className="text-text-secondary">Test your trading strategies with historical data</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-4xl font-bold">Strategy Backtesting</h1>
+          <p className="text-text-secondary mt-2">Test your trading strategies with historical data</p>
+        </div>
+        {hasResults && (
+          <div className="flex items-center gap-2">
+            <button className="px-4 py-2 rounded-lg glass hover:bg-white/10 transition-colors flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save Results
+            </button>
+            <button className="px-4 py-2 rounded-lg glass hover:bg-white/10 transition-colors flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Export Report
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <div className="glass rounded-xl p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Strategy Configuration
-            </h2>
+          <div className="glass rounded-xl p-6 sticky top-6">
+            <h2 className="text-xl font-semibold mb-6">Configuration</h2>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-text-secondary mb-1 block">Strategy Type</label>
+                <label className="text-sm text-text-secondary mb-2 block">Strategy Type</label>
                 <select
                   value={config.strategy_type}
-                  onChange={(e) => setConfig({...config, strategy_type: e.target.value as any})}
-                  className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none"
+                  onChange={(e) => setConfig({ ...config, strategy_type: e.target.value })}
+                  className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
                 >
                   <option value="momentum">Momentum</option>
                   <option value="mean_reversion">Mean Reversion</option>
@@ -90,55 +113,76 @@ export default function BacktestPage() {
               </div>
 
               <div>
-                <label className="text-sm text-text-secondary mb-1 block">Assets</label>
-                <select
-                  value={config.assets[0]}
-                  onChange={(e) => setConfig({...config, assets: [e.target.value]})}
-                  className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none"
-                >
-                  <option value="bitcoin">Bitcoin</option>
-                  <option value="ethereum">Ethereum</option>
-                  <option value="solana">Solana</option>
-                </select>
+                <label className="text-sm text-text-secondary mb-2 block">Assets</label>
+                <div className="space-y-2">
+                  {['bitcoin', 'ethereum', 'solana', 'cardano'].map(asset => (
+                    <label key={asset} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={config.assets.includes(asset)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setConfig({ ...config, assets: [...config.assets, asset] })
+                          } else {
+                            setConfig({ ...config, assets: config.assets.filter(a => a !== asset) })
+                          }
+                        }}
+                        className="rounded border-border-default"
+                      />
+                      <span className="capitalize">{asset}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-text-secondary mb-1 block">Start Date</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Start Date</label>
                   <input
                     type="date"
                     value={config.start_date}
-                    onChange={(e) => setConfig({...config, start_date: e.target.value})}
-                    className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none text-sm"
+                    onChange={(e) => setConfig({ ...config, start_date: e.target.value })}
+                    className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-text-secondary mb-1 block">End Date</label>
+                  <label className="text-sm text-text-secondary mb-2 block">End Date</label>
                   <input
                     type="date"
                     value={config.end_date}
-                    onChange={(e) => setConfig({...config, end_date: e.target.value})}
-                    className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none text-sm"
+                    onChange={(e) => setConfig({ ...config, end_date: e.target.value })}
+                    className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-sm text-text-secondary mb-1 block">Initial Capital</label>
+                <label className="text-sm text-text-secondary mb-2 block">Initial Capital (USD)</label>
                 <input
                   type="number"
                   value={config.initial_capital}
-                  onChange={(e) => setConfig({...config, initial_capital: parseFloat(e.target.value)})}
-                  className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none"
+                  onChange={(e) => setConfig({ ...config, initial_capital: parseFloat(e.target.value) })}
+                  className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-text-secondary mb-1 block">Rebalance Frequency</label>
+                <label className="text-sm text-text-secondary mb-2 block">Position Size (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={config.position_size * 100}
+                  onChange={(e) => setConfig({ ...config, position_size: parseFloat(e.target.value) / 100 })}
+                  className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-text-secondary mb-2 block">Rebalance Frequency</label>
                 <select
                   value={config.rebalance_frequency}
-                  onChange={(e) => setConfig({...config, rebalance_frequency: e.target.value as any})}
-                  className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none"
+                  onChange={(e) => setConfig({ ...config, rebalance_frequency: e.target.value })}
+                  className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
                 >
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
@@ -148,23 +192,23 @@ export default function BacktestPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-text-secondary mb-1 block">Transaction Cost</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Stop Loss (%)</label>
                   <input
                     type="number"
-                    step="0.0001"
-                    value={config.transaction_cost}
-                    onChange={(e) => setConfig({...config, transaction_cost: parseFloat(e.target.value)})}
-                    className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none text-sm"
+                    step="0.01"
+                    value={config.stop_loss * 100}
+                    onChange={(e) => setConfig({ ...config, stop_loss: parseFloat(e.target.value) / 100 })}
+                    className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-text-secondary mb-1 block">Slippage</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Take Profit (%)</label>
                   <input
                     type="number"
-                    step="0.0001"
-                    value={config.slippage}
-                    onChange={(e) => setConfig({...config, slippage: parseFloat(e.target.value)})}
-                    className="w-full px-3 py-2 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none text-sm"
+                    step="0.01"
+                    value={config.take_profit * 100}
+                    onChange={(e) => setConfig({ ...config, take_profit: parseFloat(e.target.value) / 100 })}
+                    className="w-full px-3 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none text-sm"
                   />
                 </div>
               </div>
@@ -172,16 +216,16 @@ export default function BacktestPage() {
               <button
                 onClick={runBacktest}
                 disabled={isRunning}
-                className="w-full py-3 rounded-lg bg-accent-primary hover:bg-accent-primary-hover transition-colors text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 rounded-lg bg-accent-primary hover:bg-accent-primary-hover transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isRunning ? (
                   <>
-                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    Running...
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Running Backtest...
                   </>
                 ) : (
                   <>
-                    <Play className="h-5 w-5" />
+                    <Play className="h-4 w-4" />
                     Run Backtest
                   </>
                 )}
@@ -191,135 +235,146 @@ export default function BacktestPage() {
         </div>
 
         <div className="lg:col-span-2">
-          {!result ? (
+          {!hasResults ? (
             <div className="glass rounded-xl p-12 text-center">
-              <BarChart3 className="h-16 w-16 text-text-tertiary mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">No Results Yet</h3>
-              <p className="text-text-secondary">Configure your strategy and run a backtest to see results</p>
+              <TrendingUp className="h-16 w-16 mx-auto mb-4 text-text-tertiary" />
+              <h2 className="text-2xl font-semibold mb-2">Ready to Backtest</h2>
+              <p className="text-text-secondary">Configure your strategy and run the backtest to see results</p>
             </div>
           ) : (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="card">
-                  <p className="text-text-tertiary text-sm mb-1">Total Return</p>
-                  <p className={`text-2xl font-mono font-bold ${result.total_return >= 0 ? 'text-semantic-success' : 'text-semantic-error'}`}>
-                    {result.total_return >= 0 ? '+' : ''}{result.total_return.toFixed(2)}%
-                  </p>
+                <div className="glass rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-text-tertiary" />
+                    <span className="text-sm text-text-secondary">Total Return</span>
+                  </div>
+                  <div className="text-2xl font-bold text-semantic-success">
+                    +{results.total_return.toFixed(1)}%
+                  </div>
                 </div>
 
-                <div className="card">
-                  <p className="text-text-tertiary text-sm mb-1">Sharpe Ratio</p>
-                  <p className="text-2xl font-mono font-bold">{result.sharpe_ratio.toFixed(2)}</p>
+                <div className="glass rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-text-tertiary" />
+                    <span className="text-sm text-text-secondary">Sharpe Ratio</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {results.sharpe_ratio.toFixed(2)}
+                  </div>
                 </div>
 
-                <div className="card">
-                  <p className="text-text-tertiary text-sm mb-1">Max Drawdown</p>
-                  <p className="text-2xl font-mono font-bold text-semantic-error">-{result.max_drawdown.toFixed(2)}%</p>
+                <div className="glass rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-text-tertiary" />
+                    <span className="text-sm text-text-secondary">Max Drawdown</span>
+                  </div>
+                  <div className="text-2xl font-bold text-semantic-error">
+                    {results.max_drawdown.toFixed(1)}%
+                  </div>
                 </div>
 
-                <div className="card">
-                  <p className="text-text-tertiary text-sm mb-1">Win Rate</p>
-                  <p className="text-2xl font-mono font-bold">{result.win_rate.toFixed(1)}%</p>
+                <div className="glass rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="h-4 w-4 text-text-tertiary" />
+                    <span className="text-sm text-text-secondary">Win Rate</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {results.win_rate.toFixed(1)}%
+                  </div>
                 </div>
               </div>
 
               <div className="glass rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-4">Equity Curve</h3>
+                <h3 className="text-lg font-semibold mb-4">Equity Curve</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={result.equity_curve}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A3142" />
-                    <XAxis dataKey="date" stroke="#6B7A90" />
-                    <YAxis stroke="#6B7A90" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1E2433', 
-                        border: '1px solid #3A4358', 
-                        borderRadius: '8px' 
-                      }} 
+                  <AreaChart data={equityCurve}>
+                    <defs>
+                      <linearGradient id="colorStrategy" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorBenchmark" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6b7280" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#6b7280" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="week" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                      labelStyle={{ color: '#9ca3af' }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#10B981" 
-                      strokeWidth={2} 
-                      dot={false} 
-                    />
-                  </LineChart>
+                    <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#colorStrategy)" />
+                    <Area type="monotone" dataKey="benchmark" stroke="#6b7280" fillOpacity={1} fill="url(#colorBenchmark)" />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="glass rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-4">Performance Metrics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex justify-between items-center p-3 glass rounded-lg">
-                    <span className="text-text-secondary">Annualized Return</span>
-                    <span className="font-mono font-semibold text-semantic-success">
-                      +{result.annualized_return.toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 glass rounded-lg">
-                    <span className="text-text-secondary">Profit Factor</span>
-                    <span className="font-mono font-semibold">{result.profit_factor.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 glass rounded-lg">
-                    <span className="text-text-secondary">Number of Trades</span>
-                    <span className="font-mono font-semibold">{result.num_trades}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 glass rounded-lg">
-                    <span className="text-text-secondary">Final Portfolio Value</span>
-                    <span className="font-mono font-semibold">
-                      ${(config.initial_capital * (1 + result.total_return / 100)).toFixed(2)}
-                    </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="glass rounded-xl p-6">
+                  <h3 className="text-lg font-semibold mb-4">Performance Metrics</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Total Return</span>
+                      <span className="font-mono font-semibold text-semantic-success">+{results.total_return.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Annualized Return</span>
+                      <span className="font-mono font-semibold">+{results.annualized_return.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Sharpe Ratio</span>
+                      <span className="font-mono">{results.sharpe_ratio.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Sortino Ratio</span>
+                      <span className="font-mono">{results.sortino_ratio.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Profit Factor</span>
+                      <span className="font-mono">{results.profit_factor.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Number of Trades</span>
+                      <span className="font-mono">{results.num_trades}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="glass rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-4">Recent Trades</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border-subtle">
-                        <th className="text-left py-2 px-3 text-text-secondary font-medium text-sm">Date</th>
-                        <th className="text-left py-2 px-3 text-text-secondary font-medium text-sm">Action</th>
-                        <th className="text-right py-2 px-3 text-text-secondary font-medium text-sm">Price</th>
-                        <th className="text-right py-2 px-3 text-text-secondary font-medium text-sm">Quantity</th>
-                        <th className="text-right py-2 px-3 text-text-secondary font-medium text-sm">P&L</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.trades.slice(0, 5).map((trade, index) => (
-                        <tr key={index} className="border-b border-border-subtle">
-                          <td className="py-3 px-3 text-sm">{trade.date}</td>
-                          <td className="py-3 px-3">
-                            <span className={`text-sm font-medium ${trade.action === 'buy' ? 'text-semantic-success' : 'text-semantic-error'}`}>
-                              {trade.action.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="text-right py-3 px-3 font-mono text-sm">${trade.price.toFixed(2)}</td>
-                          <td className="text-right py-3 px-3 font-mono text-sm">{trade.quantity.toFixed(4)}</td>
-                          <td className={`text-right py-3 px-3 font-mono text-sm font-semibold ${trade.pnl && trade.pnl >= 0 ? 'text-semantic-success' : 'text-semantic-error'}`}>
-                            {trade.pnl ? `$${trade.pnl.toFixed(2)}` : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="glass rounded-xl p-6">
+                  <h3 className="text-lg font-semibold mb-4">Trade Statistics</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Win Rate</span>
+                      <span className="font-mono">{results.win_rate.toFixed(1)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Average Win</span>
+                      <span className="font-mono text-semantic-success">+{results.avg_win.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Average Loss</span>
+                      <span className="font-mono text-semantic-error">{results.avg_loss.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Largest Win</span>
+                      <span className="font-mono text-semantic-success">+{results.largest_win.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Largest Loss</span>
+                      <span className="font-mono text-semantic-error">{results.largest_loss.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-secondary">Max Drawdown</span>
+                      <span className="font-mono text-semantic-error">{results.max_drawdown.toFixed(2)}%</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="p-4 glass rounded-lg">
-        <div className="flex items-start gap-2">
-          <Info className="h-5 w-5 text-accent-primary flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-text-secondary">
-            <strong>Important:</strong> Backtesting results are based on historical data and do not guarantee future performance. 
-            Transaction costs, slippage, and market impact are estimated and may differ in live trading. 
-            Always conduct thorough research and consider your risk tolerance before implementing any strategy.
-          </p>
         </div>
       </div>
     </div>
