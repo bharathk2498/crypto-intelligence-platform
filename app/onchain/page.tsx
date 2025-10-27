@@ -1,345 +1,335 @@
-'use client'
+use client
 
 import { useState, useEffect } from 'react'
-import { Activity, TrendingUp, TrendingDown, Database, Users, ArrowUpDown, Layers } from 'lucide-react'
-import { OnChainMetrics } from '@/lib/types'
-import { fetchOnChainMetrics, formatNumber } from '@/lib/api'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-
-interface OnChainData {
-  assetId: string
-  assetName: string
-  metrics: OnChainMetrics
-}
+import { Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft, Users, Layers, Database } from 'lucide-react'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { fetchOnChainMetrics } from '@/lib/api'
 
 export default function OnChainPage() {
   const [selectedAsset, setSelectedAsset] = useState('bitcoin')
-  const [onChainData, setOnChainData] = useState<OnChainData | null>(null)
+  const [metrics, setMetrics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('24h')
-
-  const assets = [
-    { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
-    { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
-    { id: 'solana', name: 'Solana', symbol: 'SOL' }
-  ]
 
   useEffect(() => {
-    async function loadOnChainData() {
-      setLoading(true)
-      const metrics = await fetchOnChainMetrics(selectedAsset)
-      
-      if (metrics) {
-        const asset = assets.find(a => a.id === selectedAsset)
-        setOnChainData({
-          assetId: selectedAsset,
-          assetName: asset?.name || selectedAsset,
-          metrics
-        })
-      }
-      setLoading(false)
-    }
-
     loadOnChainData()
   }, [selectedAsset])
 
-  // Mock historical data for charts
-  const exchangeFlowData = [
-    { date: 'Mon', inflow: 12500, outflow: 11800 },
-    { date: 'Tue', inflow: 13200, outflow: 12100 },
-    { date: 'Wed', inflow: 11800, outflow: 13500 },
-    { date: 'Thu', inflow: 14100, outflow: 12800 },
-    { date: 'Fri', inflow: 12900, outflow: 14200 },
-    { date: 'Sat', inflow: 13800, outflow: 13100 },
-    { date: 'Sun', inflow: 12500, outflow: 11900 }
+  async function loadOnChainData() {
+    setLoading(true)
+    const data = await fetchOnChainMetrics(selectedAsset)
+    setMetrics(data)
+    setLoading(false)
+  }
+
+  const whaleTransactions = [
+    {
+      time: '2 hours ago',
+      amount: 1250.5,
+      type: 'transfer',
+      from: '0x742d...3f91',
+      to: '0x8a3c...2e5b',
+      value: 54250000
+    },
+    {
+      time: '4 hours ago',
+      amount: 850.2,
+      type: 'exchange_deposit',
+      from: '0x1f3a...9c2d',
+      to: 'Binance Hot Wallet',
+      value: 36840000
+    },
+    {
+      time: '6 hours ago',
+      amount: 2100.8,
+      type: 'exchange_withdrawal',
+      from: 'Coinbase',
+      to: '0x4e7b...1a9f',
+      value: 91035000
+    },
+    {
+      time: '8 hours ago',
+      amount: 675.3,
+      type: 'transfer',
+      from: '0x9d2c...6e4a',
+      to: '0x3b8f...7d1c',
+      value: 29257500
+    }
   ]
 
-  const activeAddressesData = [
-    { date: '1d', count: 920000 },
-    { date: '2d', count: 935000 },
-    { date: '3d', count: 950000 },
-    { date: '4d', count: 945000 },
-    { date: '5d', count: 960000 },
-    { date: '6d', count: 955000 },
-    { date: '7d', count: 950000 }
+  const exchangeFlowData = Array.from({ length: 7 }, (_, i) => ({
+    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+    inflow: Math.random() * 15000 + 5000,
+    outflow: Math.random() * 15000 + 5000
+  }))
+
+  const activeAddressData = Array.from({ length: 30 }, (_, i) => ({
+    day: i + 1,
+    count: Math.floor(Math.random() * 200000 + 750000)
+  }))
+
+  const supplyDistribution = [
+    { range: '0-0.01 BTC', holders: 23450000, supply: 2.3 },
+    { range: '0.01-0.1 BTC', holders: 8950000, supply: 4.1 },
+    { range: '0.1-1 BTC', holders: 3200000, supply: 8.7 },
+    { range: '1-10 BTC', holders: 850000, supply: 15.2 },
+    { range: '10-100 BTC', holders: 145000, supply: 22.8 },
+    { range: '100-1000 BTC', holders: 18000, supply: 28.5 },
+    { range: '1000+ BTC', holders: 2100, supply: 18.4 }
   ]
 
-  if (loading) {
+  if (loading || !metrics) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="glass rounded-xl p-8 animate-pulse">
-          <div className="h-8 bg-white/10 rounded w-64 mb-4"></div>
-          <div className="h-64 bg-white/10 rounded"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2">On-Chain Analytics</h1>
-          <p className="text-text-secondary">Real-time blockchain metrics and network health indicators</p>
+          <h1 className="text-4xl font-bold">On-Chain Analytics</h1>
+          <p className="text-text-secondary mt-2">Real-time blockchain intelligence and whale tracking</p>
         </div>
-        
-        <div className="flex gap-3">
-          {(['24h', '7d', '30d'] as const).map(tf => (
+        <div className="flex items-center gap-3">
+          {['bitcoin', 'ethereum', 'solana'].map(asset => (
             <button
-              key={tf}
-              onClick={() => setTimeframe(tf)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                timeframe === tf 
-                  ? 'bg-accent-primary text-white' 
-                  : 'glass hover:bg-white/10'
-              }`}
-            >
-              {tf}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="glass rounded-xl p-6 mb-6">
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {assets.map(asset => (
-            <button
-              key={asset.id}
-              onClick={() => setSelectedAsset(asset.id)}
-              className={`px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap ${
-                selectedAsset === asset.id
+              key={asset}
+              onClick={() => setSelectedAsset(asset)}
+              className={`px-4 py-2 rounded-lg transition-colors capitalize ${
+                selectedAsset === asset
                   ? 'bg-accent-primary text-white'
                   : 'glass hover:bg-white/10'
               }`}
             >
-              {asset.name} ({asset.symbol})
+              {asset}
             </button>
           ))}
         </div>
       </div>
 
-      {onChainData && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div className="card">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="h-5 w-5 text-accent-primary" />
-                <p className="text-text-tertiary text-sm">Active Addresses</p>
-              </div>
-              <p className="text-3xl font-mono font-bold">{formatNumber(onChainData.metrics.active_addresses, 0)}</p>
-              <p className="text-sm text-semantic-success mt-1">+2.4% vs yesterday</p>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="h-5 w-5 text-accent-primary" />
-                <p className="text-text-tertiary text-sm">Transactions (24h)</p>
-              </div>
-              <p className="text-3xl font-mono font-bold">{formatNumber(onChainData.metrics.transaction_count, 0)}</p>
-              <p className="text-sm text-semantic-success mt-1">+1.8% vs yesterday</p>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-2 mb-2">
-                <ArrowUpDown className="h-5 w-5 text-accent-primary" />
-                <p className="text-text-tertiary text-sm">Net Exchange Flow</p>
-              </div>
-              <p className={`text-3xl font-mono font-bold ${onChainData.metrics.net_exchange_flow >= 0 ? 'text-semantic-success' : 'text-semantic-error'}`}>
-                {onChainData.metrics.net_exchange_flow >= 0 ? '+' : ''}{formatNumber(Math.abs(onChainData.metrics.net_exchange_flow), 0)}
-              </p>
-              <p className="text-sm text-text-tertiary mt-1">BTC</p>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-2 mb-2">
-                <Database className="h-5 w-5 text-accent-primary" />
-                <p className="text-text-tertiary text-sm">Whale Transactions</p>
-              </div>
-              <p className="text-3xl font-mono font-bold">{onChainData.metrics.whale_transactions}</p>
-              <p className="text-sm text-text-tertiary mt-1">{'>'}$100k transfers</p>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Active Addresses</span>
+            <Activity className="h-4 w-4 text-text-tertiary" />
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="glass rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-4">Exchange Flow (7 Days)</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={exchangeFlowData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2A3142" />
-                  <XAxis dataKey="date" stroke="#6B7A90" />
-                  <YAxis stroke="#6B7A90" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1E2433', 
-                      border: '1px solid #3A4358', 
-                      borderRadius: '8px' 
-                    }} 
-                  />
-                  <Legend />
-                  <Bar dataKey="inflow" fill="#EF4444" name="Inflow" />
-                  <Bar dataKey="outflow" fill="#10B981" name="Outflow" />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-4 p-3 glass rounded-lg text-sm">
-                <p className="text-text-secondary">
-                  <strong>Net Flow:</strong> Negative flow (more outflow) typically indicates accumulation and is bullish. 
-                  Positive flow (more inflow) suggests selling pressure.
-                </p>
-              </div>
-            </div>
-
-            <div className="glass rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-4">Active Addresses (7 Days)</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={activeAddressesData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2A3142" />
-                  <XAxis dataKey="date" stroke="#6B7A90" />
-                  <YAxis stroke="#6B7A90" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1E2433', 
-                      border: '1px solid #3A4358', 
-                      borderRadius: '8px' 
-                    }} 
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#6366F1" 
-                    strokeWidth={3} 
-                    dot={false} 
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              <div className="mt-4 p-3 glass rounded-lg text-sm">
-                <p className="text-text-secondary">
-                  <strong>Network Activity:</strong> Rising active addresses indicate growing network adoption and user engagement.
-                </p>
-              </div>
-            </div>
+          <div className="text-2xl font-bold font-mono">
+            {metrics.active_addresses.toLocaleString()}
           </div>
+          <div className="text-sm text-semantic-success mt-1">+5.2% from yesterday</div>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="glass rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-4">Supply Distribution</h3>
-              <div className="space-y-4 mb-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-text-secondary">Long-Term Holders (LTH)</span>
-                    <span className="font-mono font-semibold">{(onChainData.metrics.supply_held_by_lth * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-surface-default rounded-full h-3">
-                    <div 
-                      className="bg-gradient-to-r from-accent-primary to-accent-secondary h-3 rounded-full"
-                      style={{ width: `${onChainData.metrics.supply_held_by_lth * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Transactions (24h)</span>
+            <Database className="h-4 w-4 text-text-tertiary" />
+          </div>
+          <div className="text-2xl font-bold font-mono">
+            {metrics.transaction_count.toLocaleString()}
+          </div>
+          <div className="text-sm text-semantic-error mt-1">-2.1% from yesterday</div>
+        </div>
 
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-text-secondary">Short-Term Holders (STH)</span>
-                    <span className="font-mono font-semibold">{(onChainData.metrics.supply_held_by_sth * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-surface-default rounded-full h-3">
-                    <div 
-                      className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full"
-                      style={{ width: `${onChainData.metrics.supply_held_by_sth * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 glass rounded-lg text-sm">
-                <p className="text-text-secondary">
-                  <strong>Holder Behavior:</strong> Higher LTH ratio suggests strong conviction. 
-                  STH activity often correlates with short-term volatility.
-                </p>
-              </div>
-            </div>
-
-            {onChainData.metrics.staking_ratio > 0 && (
-              <div className="glass rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-4">Staking Metrics</h3>
-                <div className="space-y-4">
-                  <div className="card">
-                    <p className="text-text-tertiary text-sm mb-1">Staking Ratio</p>
-                    <p className="text-3xl font-mono font-bold">{(onChainData.metrics.staking_ratio * 100).toFixed(1)}%</p>
-                    <p className="text-sm text-semantic-success mt-1">of total supply staked</p>
-                  </div>
-
-                  <div className="card">
-                    <p className="text-text-tertiary text-sm mb-1">Validator Count</p>
-                    <p className="text-3xl font-mono font-bold">{formatNumber(onChainData.metrics.validator_count, 0)}</p>
-                    <p className="text-sm text-text-tertiary mt-1">active validators</p>
-                  </div>
-
-                  <div className="p-3 glass rounded-lg text-sm">
-                    <p className="text-text-secondary">
-                      <strong>Network Security:</strong> High staking ratio reduces circulating supply and strengthens network security.
-                    </p>
-                  </div>
-                </div>
-              </div>
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Net Exchange Flow</span>
+            {metrics.net_exchange_flow >= 0 ? (
+              <ArrowUpRight className="h-4 w-4 text-semantic-error" />
+            ) : (
+              <ArrowDownLeft className="h-4 w-4 text-semantic-success" />
             )}
           </div>
+          <div className={`text-2xl font-bold font-mono ${
+            metrics.net_exchange_flow >= 0 ? 'text-semantic-error' : 'text-semantic-success'
+          }`}>
+            {metrics.net_exchange_flow >= 0 ? '+' : ''}{metrics.net_exchange_flow.toLocaleString()}
+          </div>
+          <div className="text-sm text-text-tertiary mt-1">
+            {metrics.net_exchange_flow >= 0 ? 'Inflow (Bearish)' : 'Outflow (Bullish)'}
+          </div>
+        </div>
 
-          <div className="glass rounded-xl p-6">
-            <h3 className="text-lg font-bold mb-4">Key On-Chain Signals</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 glass rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">Exchange Flow</h4>
-                  {onChainData.metrics.net_exchange_flow < 0 ? (
-                    <TrendingUp className="h-5 w-5 text-semantic-success" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-semantic-error" />
-                  )}
-                </div>
-                <p className="text-sm text-text-secondary">
-                  {onChainData.metrics.net_exchange_flow < 0 
-                    ? 'Bullish: More coins leaving exchanges (accumulation)'
-                    : 'Bearish: More coins entering exchanges (distribution)'}
-                </p>
-              </div>
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Whale Transactions</span>
+            <Users className="h-4 w-4 text-text-tertiary" />
+          </div>
+          <div className="text-2xl font-bold font-mono">
+            {metrics.whale_transactions}
+          </div>
+          <div className="text-sm text-semantic-success mt-1">+12.5% from yesterday</div>
+        </div>
+      </div>
 
-              <div className="p-4 glass rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">Whale Activity</h4>
-                  {onChainData.metrics.whale_transactions > 40 ? (
-                    <Activity className="h-5 w-5 text-orange-400" />
-                  ) : (
-                    <Activity className="h-5 w-5 text-text-tertiary" />
-                  )}
-                </div>
-                <p className="text-sm text-text-secondary">
-                  {onChainData.metrics.whale_transactions > 40
-                    ? 'High whale activity detected - increased volatility expected'
-                    : 'Normal whale activity levels'}
-                </p>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2 glass rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-4">Active Addresses (30 Days)</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={activeAddressData}>
+              <defs>
+                <linearGradient id="colorAddresses" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="day" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                labelStyle={{ color: '#9ca3af' }}
+              />
+              <Area type="monotone" dataKey="count" stroke="#3b82f6" fillOpacity={1} fill="url(#colorAddresses)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
 
-              <div className="p-4 glass rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">Network Health</h4>
-                  <TrendingUp className="h-5 w-5 text-semantic-success" />
-                </div>
-                <p className="text-sm text-text-secondary">
-                  Active addresses and transaction count showing healthy network activity
-                </p>
-              </div>
+        <div className="glass rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-4">Supply Distribution</h2>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-text-secondary text-sm">Long-term Holders</span>
+              <span className="font-mono font-semibold">{(metrics.supply_held_by_lth * 100).toFixed(1)}%</span>
             </div>
-          </div>
+            <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-semantic-success"
+                style={{ width: `${metrics.supply_held_by_lth * 100}%` }}
+              />
+            </div>
 
-          <div className="mt-6 p-4 glass rounded-lg">
-            <p className="text-sm text-text-secondary">
-              <strong>Data Source:</strong> On-chain metrics are aggregated from blockchain explorers and node providers. 
-              Data updates every 10 minutes. Some metrics may have a 1-2 block delay. 
-              Use multiple indicators together for better analysis.
-            </p>
+            <div className="flex items-center justify-between pt-3">
+              <span className="text-text-secondary text-sm">Short-term Holders</span>
+              <span className="font-mono font-semibold">{(metrics.supply_held_by_sth * 100).toFixed(1)}%</span>
+            </div>
+            <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-semantic-error"
+                style={{ width: `${metrics.supply_held_by_sth * 100}%` }}
+              />
+            </div>
+
+            {selectedAsset === 'ethereum' && (
+              <>
+                <div className="flex items-center justify-between pt-3">
+                  <span className="text-text-secondary text-sm">Staking Ratio</span>
+                  <span className="font-mono font-semibold">{(metrics.staking_ratio * 100).toFixed(1)}%</span>
+                </div>
+                <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-accent-primary"
+                    style={{ width: `${metrics.staking_ratio * 100}%` }}
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-border-subtle">
+                  <div className="flex items-center justify-between">
+                    <span className="text-text-secondary text-sm">Validators</span>
+                    <span className="font-mono font-semibold">{metrics.validator_count.toLocaleString()}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </>
-      )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="glass rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-4">Exchange Flows (7 Days)</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={exchangeFlowData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="day" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                labelStyle={{ color: '#9ca3af' }}
+              />
+              <Bar dataKey="inflow" fill="#ef4444" name="Inflow" />
+              <Bar dataKey="outflow" fill="#10b981" name="Outflow" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="glass rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-4">Whale Transactions</h2>
+          <div className="space-y-3">
+            {whaleTransactions.map((tx, index) => (
+              <div key={index} className="p-4 rounded-lg glass hover:bg-white/5 transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {tx.type === 'exchange_deposit' ? (
+                      <ArrowUpRight className="h-4 w-4 text-semantic-error" />
+                    ) : tx.type === 'exchange_withdrawal' ? (
+                      <ArrowDownLeft className="h-4 w-4 text-semantic-success" />
+                    ) : (
+                      <TrendingUp className="h-4 w-4 text-text-tertiary" />
+                    )}
+                    <span className="text-sm text-text-tertiary capitalize">
+                      {tx.type.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <span className="text-sm text-text-tertiary">{tx.time}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <span className="text-text-secondary">From:</span>
+                    <span className="font-mono ml-2">{tx.from}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <span className="text-text-secondary">To:</span>
+                    <span className="font-mono ml-2">{tx.to}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-subtle">
+                  <span className="font-mono font-semibold">{tx.amount.toFixed(2)} BTC</span>
+                  <span className="text-text-secondary">${tx.value.toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="glass rounded-xl p-6">
+        <h2 className="text-xl font-semibold mb-4">Address Distribution by Balance</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-border-subtle">
+              <tr>
+                <th className="text-left py-3 px-4 text-text-secondary font-medium">Balance Range</th>
+                <th className="text-right py-3 px-4 text-text-secondary font-medium">Addresses</th>
+                <th className="text-right py-3 px-4 text-text-secondary font-medium">Supply %</th>
+                <th className="text-left py-3 px-4 text-text-secondary font-medium">Distribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              {supplyDistribution.map((dist, index) => (
+                <tr key={index} className="border-b border-border-subtle hover:bg-white/5 transition-colors">
+                  <td className="py-4 px-4 font-mono">{dist.range}</td>
+                  <td className="text-right py-4 px-4 font-mono">{dist.holders.toLocaleString()}</td>
+                  <td className="text-right py-4 px-4 font-mono font-semibold">{dist.supply.toFixed(1)}%</td>
+                  <td className="py-4 px-4">
+                    <div className="h-2 bg-background-secondary rounded-full overflow-hidden max-w-xs">
+                      <div 
+                        className="h-full bg-gradient-to-r from-accent-primary to-accent-secondary"
+                        style={{ width: `${(dist.supply / 30) * 100}%` }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }

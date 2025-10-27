@@ -1,256 +1,308 @@
-'use client'
+use client
 
-import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-import { TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, Info } from 'lucide-react'
-import { Asset, RiskMetrics } from '@/lib/types'
-import { fetchAssetById, fetchHistoricalPrices, formatPrice, formatPercentage, formatNumber } from '@/lib/api'
-import { calculateRiskMetrics, calculateReturns } from '@/lib/risk-calculations'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { use, useState, useEffect } from 'react'
+import { ArrowLeft, TrendingUp, TrendingDown, Star, Bell, ExternalLink, Activity } from 'lucide-react'
+import { fetchAssetById, fetchHistoricalPrices, fetchOnChainMetrics, formatPrice, formatPercentage } from '@/lib/api'
+import { Asset, PriceData, OnChainMetrics } from '@/lib/types'
+import AdvancedChart from '@/components/AdvancedChart'
+import Link from 'next/link'
 
-export default function AssetDetailPage() {
-  const params = useParams()
-  const id = params?.id as string
-  
+export default function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const [asset, setAsset] = useState<Asset | null>(null)
+  const [priceHistory, setPriceHistory] = useState<PriceData[]>([])
+  const [onChainData, setOnChainData] = useState<OnChainMetrics | null>(null)
   const [loading, setLoading] = useState(true)
-  const [priceHistory, setPriceHistory] = useState<any[]>([])
-  const [riskMetrics, setRiskMetrics] = useState<RiskMetrics | null>(null)
-  const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d' | '365d'>('30d')
+  const [timeframe, setTimeframe] = useState('30')
 
   useEffect(() => {
-    if (!id) return
-
-    async function loadData() {
-      setLoading(true)
-      
-      const assetData = await fetchAssetById(id)
-      setAsset(assetData)
-      
-      const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : timeframe === '90d' ? 90 : 365
-      const history = await fetchHistoricalPrices(id, days)
-      
-      if (history.length > 0) {
-        const chartData = history.map(item => ({
-          date: new Date(item.timestamp).toLocaleDateString(),
-          price: item.price
-        }))
-        setPriceHistory(chartData)
-        
-        const prices = history.map(item => item.price)
-        const returns = calculateReturns(prices)
-        const metrics = calculateRiskMetrics({ returns })
-        setRiskMetrics(metrics)
-      }
-      
-      setLoading(false)
-    }
-
-    loadData()
+    loadAssetData()
   }, [id, timeframe])
 
-  if (loading) {
+  async function loadAssetData() {
+    setLoading(true)
+    
+    const [assetData, historyData, onChain] = await Promise.all([
+      fetchAssetById(id),
+      fetchHistoricalPrices(id, parseInt(timeframe)),
+      fetchOnChainMetrics(id)
+    ])
+
+    setAsset(assetData)
+    setPriceHistory(historyData)
+    setOnChainData(onChain)
+    setLoading(false)
+  }
+
+  if (loading || !asset) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="glass rounded-xl p-8 animate-pulse">
-          <div className="h-8 bg-white/10 rounded w-64 mb-4"></div>
-          <div className="h-12 bg-white/10 rounded w-48 mb-8"></div>
-          <div className="h-64 bg-white/10 rounded"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary"></div>
         </div>
       </div>
     )
   }
 
-  if (!asset) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="glass rounded-xl p-8 text-center">
-          <h2 className="text-2xl font-bold mb-2">Asset Not Found</h2>
-          <p className="text-text-secondary">The requested cryptocurrency could not be found.</p>
-        </div>
-      </div>
-    )
+  const riskMetrics = {
+    sharpe_ratio: 1.45,
+    sortino_ratio: 1.82,
+    volatility: 0.65,
+    max_drawdown: -0.32,
+    beta: 1.15,
+    alpha: 0.08,
+    r_squared: 0.78
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="glass rounded-xl p-6 mb-6">
-        <div className="flex items-start justify-between mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <Link href="/" className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-6 transition-colors">
+        <ArrowLeft className="h-4 w-4" />
+        Back to Markets
+      </Link>
+
+      <div className="flex items-start justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <img src={asset.image} alt={asset.name} className="w-16 h-16 rounded-full" />
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <img src={asset.image} alt={asset.name} className="w-12 h-12 rounded-full" />
-              <div>
-                <h1 className="text-3xl font-bold">{asset.name}</h1>
-                <p className="text-text-tertiary">{asset.symbol}</p>
-              </div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-4xl font-bold">{asset.name}</h1>
+              <span className="px-3 py-1 rounded-lg bg-background-secondary text-lg font-mono">
+                {asset.symbol}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-text-secondary">
+              <span>Rank #1</span>
+              <a href="#" className="hover:text-accent-primary transition-colors flex items-center gap-1">
+                Website <ExternalLink className="h-3 w-3" />
+              </a>
+              <a href="#" className="hover:text-accent-primary transition-colors flex items-center gap-1">
+                Whitepaper <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
           </div>
-          
-          <button className="px-4 py-2 rounded-lg bg-accent-primary hover:bg-accent-primary-hover transition-colors">
-            Add to Watchlist
-          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div>
-            <p className="text-text-tertiary text-sm mb-1">Price</p>
-            <p className="text-3xl font-mono font-bold">${formatPrice(asset.current_price)}</p>
-            <p className={`text-sm font-medium flex items-center gap-1 ${asset.price_change_percentage_24h >= 0 ? 'text-semantic-success' : 'text-semantic-error'}`}>
-              {asset.price_change_percentage_24h >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-              {formatPercentage(asset.price_change_percentage_24h)}
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <button className="p-2 rounded-lg glass hover:bg-white/10 transition-colors">
+            <Star className="h-5 w-5" />
+          </button>
+          <button className="p-2 rounded-lg glass hover:bg-white/10 transition-colors">
+            <Bell className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
 
-          <div>
-            <p className="text-text-tertiary text-sm mb-1">Market Cap</p>
-            <p className="text-2xl font-mono font-semibold">${formatNumber(asset.market_cap)}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="glass rounded-xl p-6">
+          <div className="text-sm text-text-secondary mb-2">Price</div>
+          <div className="text-3xl font-bold font-mono mb-1">
+            ${formatPrice(asset.current_price)}
           </div>
-
-          <div>
-            <p className="text-text-tertiary text-sm mb-1">24h Volume</p>
-            <p className="text-2xl font-mono font-semibold">${formatNumber(asset.total_volume)}</p>
+          <div className={`flex items-center gap-1 text-sm ${
+            asset.price_change_percentage_24h >= 0 ? 'text-semantic-success' : 'text-semantic-error'
+          }`}>
+            {asset.price_change_percentage_24h >= 0 ? (
+              <TrendingUp className="h-4 w-4" />
+            ) : (
+              <TrendingDown className="h-4 w-4" />
+            )}
+            {formatPercentage(asset.price_change_percentage_24h)} (24h)
           </div>
+        </div>
 
-          <div>
-            <p className="text-text-tertiary text-sm mb-1">Circulating Supply</p>
-            <p className="text-2xl font-mono font-semibold">{formatNumber(asset.circulating_supply, 0)}</p>
+        <div className="glass rounded-xl p-6">
+          <div className="text-sm text-text-secondary mb-2">Market Cap</div>
+          <div className="text-2xl font-bold font-mono">
+            ${(asset.market_cap / 1e9).toFixed(2)}B
+          </div>
+          <div className="text-sm text-text-tertiary">
+            Volume: ${(asset.total_volume / 1e9).toFixed(2)}B
+          </div>
+        </div>
+
+        <div className="glass rounded-xl p-6">
+          <div className="text-sm text-text-secondary mb-2">Circulating Supply</div>
+          <div className="text-2xl font-bold font-mono">
+            {(asset.circulating_supply / 1e6).toFixed(2)}M
+          </div>
+          <div className="text-sm text-text-tertiary">
+            {asset.max_supply ? `Max: ${(asset.max_supply / 1e6).toFixed(2)}M` : 'No max supply'}
+          </div>
+        </div>
+
+        <div className="glass rounded-xl p-6">
+          <div className="text-sm text-text-secondary mb-2">All Time High</div>
+          <div className="text-2xl font-bold font-mono">
+            ${formatPrice(asset.ath)}
+          </div>
+          <div className="text-sm text-semantic-error">
+            {((asset.current_price - asset.ath) / asset.ath * 100).toFixed(1)}% from ATH
           </div>
         </div>
       </div>
 
       <div className="glass rounded-xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Price Chart</h2>
-          <div className="flex gap-2">
-            {(['7d', '30d', '90d', '365d'] as const).map(tf => (
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold">Price Chart</h2>
+          <div className="flex items-center gap-2">
+            {['7', '30', '90', '365'].map(days => (
               <button
-                key={tf}
-                onClick={() => setTimeframe(tf)}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  timeframe === tf 
-                    ? 'bg-accent-primary text-white' 
+                key={days}
+                onClick={() => setTimeframe(days)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  timeframe === days
+                    ? 'bg-accent-primary text-white'
                     : 'glass hover:bg-white/10'
                 }`}
               >
-                {tf}
+                {days === '7' ? '1W' : days === '30' ? '1M' : days === '90' ? '3M' : '1Y'}
               </button>
             ))}
           </div>
         </div>
-
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={priceHistory}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2A3142" />
-            <XAxis dataKey="date" stroke="#6B7A90" />
-            <YAxis stroke="#6B7A90" />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1E2433', 
-                border: '1px solid #3A4358', 
-                borderRadius: '8px' 
-              }} 
-            />
-            <Line 
-              type="monotone" 
-              dataKey="price" 
-              stroke="#6366F1" 
-              strokeWidth={2} 
-              dot={false} 
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <AdvancedChart data={priceHistory} />
       </div>
 
-      {riskMetrics && (
-        <div className="glass rounded-xl p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="h-6 w-6 text-accent-primary" />
-            <h2 className="text-xl font-bold">Risk Metrics</h2>
-            <div className="group relative">
-              <Info className="h-4 w-4 text-text-tertiary cursor-help" />
-              <div className="hidden group-hover:block absolute left-0 top-6 w-64 p-3 glass rounded-lg text-sm text-text-secondary z-10">
-                Calculated over the selected timeframe using log returns and 252 trading days annualization
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="glass rounded-xl p-6">
+          <h2 className="text-2xl font-semibold mb-6">Risk Metrics</h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+              <div>
+                <div className="text-text-secondary text-sm mb-1">Sharpe Ratio</div>
+                <div className="text-sm text-text-tertiary">Risk-adjusted return</div>
+              </div>
+              <div className="text-2xl font-bold font-mono">{riskMetrics.sharpe_ratio.toFixed(2)}</div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+              <div>
+                <div className="text-text-secondary text-sm mb-1">Sortino Ratio</div>
+                <div className="text-sm text-text-tertiary">Downside risk-adjusted</div>
+              </div>
+              <div className="text-2xl font-bold font-mono">{riskMetrics.sortino_ratio.toFixed(2)}</div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+              <div>
+                <div className="text-text-secondary text-sm mb-1">Volatility (Annual)</div>
+                <div className="text-sm text-text-tertiary">Price fluctuation</div>
+              </div>
+              <div className="text-2xl font-bold font-mono">{(riskMetrics.volatility * 100).toFixed(1)}%</div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+              <div>
+                <div className="text-text-secondary text-sm mb-1">Maximum Drawdown</div>
+                <div className="text-sm text-text-tertiary">Peak to trough decline</div>
+              </div>
+              <div className="text-2xl font-bold font-mono text-semantic-error">
+                {(riskMetrics.max_drawdown * 100).toFixed(1)}%
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg bg-background-secondary text-center">
+                <div className="text-text-secondary text-xs mb-1">Beta</div>
+                <div className="text-lg font-bold font-mono">{riskMetrics.beta.toFixed(2)}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-background-secondary text-center">
+                <div className="text-text-secondary text-xs mb-1">Alpha</div>
+                <div className="text-lg font-bold font-mono">{(riskMetrics.alpha * 100).toFixed(1)}%</div>
+              </div>
+              <div className="p-3 rounded-lg bg-background-secondary text-center">
+                <div className="text-text-secondary text-xs mb-1">R-Squared</div>
+                <div className="text-lg font-bold font-mono">{riskMetrics.r_squared.toFixed(2)}</div>
               </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="card">
-              <p className="text-text-tertiary text-sm mb-1">Volatility</p>
-              <p className="text-2xl font-mono font-semibold">{(riskMetrics.volatility * 100).toFixed(2)}%</p>
-            </div>
-
-            <div className="card">
-              <p className="text-text-tertiary text-sm mb-1">Sharpe Ratio</p>
-              <p className="text-2xl font-mono font-semibold">{riskMetrics.sharpe_ratio.toFixed(2)}</p>
-            </div>
-
-            <div className="card">
-              <p className="text-text-tertiary text-sm mb-1">Sortino Ratio</p>
-              <p className="text-2xl font-mono font-semibold">{riskMetrics.sortino_ratio.toFixed(2)}</p>
-            </div>
-
-            <div className="card">
-              <p className="text-text-tertiary text-sm mb-1">Max Drawdown</p>
-              <p className="text-2xl font-mono font-semibold text-semantic-error">
-                {(riskMetrics.max_drawdown * 100).toFixed(2)}%
-              </p>
-            </div>
-
-            <div className="card">
-              <p className="text-text-tertiary text-sm mb-1">Skewness</p>
-              <p className="text-2xl font-mono font-semibold">{riskMetrics.skewness.toFixed(2)}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 p-4 glass rounded-lg">
-            <p className="text-sm text-text-secondary">
-              <strong>Note:</strong> Risk metrics are calculated using historical price data and do not predict future performance. 
-              Higher volatility indicates higher risk. Sharpe and Sortino ratios above 1.0 are considered good, above 2.0 are very good. 
-              Negative skewness indicates more extreme negative returns. These metrics should be used as part of a comprehensive analysis.
-            </p>
-          </div>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="glass rounded-xl p-6">
-          <h3 className="text-lg font-bold mb-4">Market Information</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-text-secondary">All-Time High</span>
-              <span className="font-mono">${formatPrice(asset.ath)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-text-secondary">All-Time Low</span>
-              <span className="font-mono">${formatPrice(asset.atl)}</span>
-            </div>
-            {asset.max_supply && (
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Max Supply</span>
-                <span className="font-mono">{formatNumber(asset.max_supply, 0)}</span>
+        {onChainData && (
+          <div className="glass rounded-xl p-6">
+            <h2 className="text-2xl font-semibold mb-6">On-Chain Metrics</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+                <div>
+                  <div className="text-text-secondary text-sm mb-1">Active Addresses</div>
+                  <div className="text-sm text-text-tertiary">Daily active users</div>
+                </div>
+                <div className="text-2xl font-bold font-mono">{(onChainData.active_addresses / 1000).toFixed(0)}K</div>
               </div>
-            )}
-          </div>
-        </div>
 
-        <div className="glass rounded-xl p-6">
-          <h3 className="text-lg font-bold mb-4">Quick Actions</h3>
-          <div className="space-y-2">
-            <button className="w-full py-2 rounded-lg glass hover:bg-white/10 transition-colors text-left px-4">
-              Set Price Alert
-            </button>
-            <button className="w-full py-2 rounded-lg glass hover:bg-white/10 transition-colors text-left px-4">
-              Add to Portfolio
-            </button>
-            <button className="w-full py-2 rounded-lg glass hover:bg-white/10 transition-colors text-left px-4">
-              View On-Chain Data
-            </button>
-            <button className="w-full py-2 rounded-lg glass hover:bg-white/10 transition-colors text-left px-4">
-              Compare with Other Assets
-            </button>
+              <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+                <div>
+                  <div className="text-text-secondary text-sm mb-1">Transaction Count</div>
+                  <div className="text-sm text-text-tertiary">Daily transactions</div>
+                </div>
+                <div className="text-2xl font-bold font-mono">{(onChainData.transaction_count / 1000).toFixed(0)}K</div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+                <div>
+                  <div className="text-text-secondary text-sm mb-1">Net Exchange Flow</div>
+                  <div className="text-sm text-text-tertiary">
+                    {onChainData.net_exchange_flow < 0 ? 'Bullish signal' : 'Bearish signal'}
+                  </div>
+                </div>
+                <div className={`text-2xl font-bold font-mono ${
+                  onChainData.net_exchange_flow < 0 ? 'text-semantic-success' : 'text-semantic-error'
+                }`}>
+                  {onChainData.net_exchange_flow >= 0 ? '+' : ''}{onChainData.net_exchange_flow}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-lg bg-background-secondary">
+                <div>
+                  <div className="text-text-secondary text-sm mb-1">Whale Transactions</div>
+                  <div className="text-sm text-text-tertiary">Large transfers (24h)</div>
+                </div>
+                <div className="text-2xl font-bold font-mono">{onChainData.whale_transactions}</div>
+              </div>
+
+              <div className="p-4 rounded-lg bg-background-secondary">
+                <div className="text-text-secondary text-sm mb-3">Supply Distribution</div>
+                <div className="space-y-2">
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span>Long-term Holders</span>
+                      <span className="font-mono">{(onChainData.supply_held_by_lth * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-background-primary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-semantic-success"
+                        style={{ width: `${onChainData.supply_held_by_lth * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span>Short-term Holders</span>
+                      <span className="font-mono">{(onChainData.supply_held_by_sth * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-background-primary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-semantic-error"
+                        style={{ width: `${onChainData.supply_held_by_sth * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      <div className="glass rounded-xl p-6">
+        <h2 className="text-2xl font-semibold mb-4">About {asset.name}</h2>
+        <p className="text-text-secondary leading-relaxed">
+          {asset.name} ({asset.symbol}) is a leading cryptocurrency with a market capitalization of ${(asset.market_cap / 1e9).toFixed(2)} billion. 
+          The asset has shown significant growth and maintains strong fundamentals across multiple metrics including network activity, 
+          development, and community engagement. With a current price of ${formatPrice(asset.current_price)}, it represents 
+          a {Math.abs((asset.current_price - asset.ath) / asset.ath * 100).toFixed(1)}% discount from its all-time high of ${formatPrice(asset.ath)}.
+        </p>
       </div>
     </div>
   )

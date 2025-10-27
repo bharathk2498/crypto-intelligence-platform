@@ -1,59 +1,134 @@
-'use client'
+use client
 
-import { useState, useEffect } from 'react'
-import { Bell, Plus, Trash2, Edit, Check, X, Mail, Smartphone, MessageSquare } from 'lucide-react'
-import { Alert } from '@/lib/types'
+import { useState } from 'react'
+import { Plus, Bell, Mail, MessageSquare, Webhook, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+
+interface Alert {
+  id: string
+  name: string
+  asset: string
+  condition: string
+  value: number
+  channels: string[]
+  isActive: boolean
+  lastTriggered?: string
+  triggerCount: number
+}
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [alerts, setAlerts] = useState<Alert[]>([
+    {
+      id: '1',
+      name: 'Bitcoin Price Alert',
+      asset: 'BTC',
+      condition: 'price_above',
+      value: 50000,
+      channels: ['email', 'telegram'],
+      isActive: true,
+      lastTriggered: '2 days ago',
+      triggerCount: 5
+    },
+    {
+      id: '2',
+      name: 'Ethereum Volume Spike',
+      asset: 'ETH',
+      condition: 'volume_spike',
+      value: 200,
+      channels: ['email', 'slack'],
+      isActive: true,
+      triggerCount: 12
+    },
+    {
+      id: '3',
+      name: 'SOL Whale Activity',
+      asset: 'SOL',
+      condition: 'whale_transaction',
+      value: 100000,
+      channels: ['telegram', 'webhook'],
+      isActive: false,
+      lastTriggered: '5 hours ago',
+      triggerCount: 3
+    }
+  ])
+
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [editingAlert, setEditingAlert] = useState<Alert | null>(null)
+  const [newAlert, setNewAlert] = useState({
+    name: '',
+    asset: 'BTC',
+    condition: 'price_above',
+    value: '',
+    channels: [] as string[]
+  })
 
-  useEffect(() => {
-    // Load mock alerts
-    const mockAlerts: Alert[] = [
-      {
-        id: '1',
-        user_id: 'user1',
-        name: 'BTC Price Alert',
-        asset_id: 'bitcoin',
-        condition_type: 'price_above',
-        condition_value: 45000,
-        channels: ['email', 'sms'],
-        is_active: true,
-        created_at: '2024-10-20T10:00:00Z'
-      },
-      {
-        id: '2',
-        user_id: 'user1',
-        name: 'ETH Volume Spike',
-        asset_id: 'ethereum',
-        condition_type: 'volume_spike',
-        condition_value: 150,
-        channels: ['email'],
-        is_active: true,
-        created_at: '2024-10-22T14:30:00Z'
-      }
-    ]
-    setAlerts(mockAlerts)
-  }, [])
-
-  const deleteAlert = (id: string) => {
-    setAlerts(alerts.filter(a => a.id !== id))
-  }
-
-  const toggleAlert = (id: string) => {
-    setAlerts(alerts.map(a => 
-      a.id === id ? { ...a, is_active: !a.is_active } : a
+  function toggleAlert(id: string) {
+    setAlerts(alerts.map(alert => 
+      alert.id === id ? { ...alert, isActive: !alert.isActive } : alert
     ))
   }
 
+  function deleteAlert(id: string) {
+    setAlerts(alerts.filter(alert => alert.id !== id))
+  }
+
+  function createAlert() {
+    const alert: Alert = {
+      id: Date.now().toString(),
+      name: newAlert.name,
+      asset: newAlert.asset,
+      condition: newAlert.condition,
+      value: parseFloat(newAlert.value),
+      channels: newAlert.channels,
+      isActive: true,
+      triggerCount: 0
+    }
+
+    setAlerts([...alerts, alert])
+    setShowCreateModal(false)
+    setNewAlert({
+      name: '',
+      asset: 'BTC',
+      condition: 'price_above',
+      value: '',
+      channels: []
+    })
+  }
+
+  function toggleChannel(channel: string) {
+    if (newAlert.channels.includes(channel)) {
+      setNewAlert({
+        ...newAlert,
+        channels: newAlert.channels.filter(c => c !== channel)
+      })
+    } else {
+      setNewAlert({
+        ...newAlert,
+        channels: [...newAlert.channels, channel]
+      })
+    }
+  }
+
+  const conditionLabels: Record<string, string> = {
+    price_above: 'Price Above',
+    price_below: 'Price Below',
+    volume_spike: 'Volume Spike',
+    whale_transaction: 'Whale Transaction',
+    exchange_flow: 'Exchange Flow Alert',
+    technical_indicator: 'Technical Indicator'
+  }
+
+  const channelIcons: Record<string, any> = {
+    email: Mail,
+    telegram: MessageSquare,
+    slack: MessageSquare,
+    webhook: Webhook
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Price Alerts</h1>
-          <p className="text-text-secondary">Get notified when market conditions match your criteria</p>
+          <h1 className="text-4xl font-bold">Alerts</h1>
+          <p className="text-text-secondary mt-2">Stay informed about market movements and critical events</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -64,283 +139,222 @@ export default function AlertsPage() {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="card">
-          <div className="flex items-center gap-2 mb-2">
-            <Bell className="h-5 w-5 text-accent-primary" />
-            <p className="text-text-tertiary text-sm">Active Alerts</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Total Alerts</span>
+            <Bell className="h-4 w-4 text-text-tertiary" />
           </div>
-          <p className="text-3xl font-mono font-bold">
-            {alerts.filter(a => a.is_active).length}
-          </p>
+          <div className="text-3xl font-bold">{alerts.length}</div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center gap-2 mb-2">
-            <Check className="h-5 w-5 text-semantic-success" />
-            <p className="text-text-tertiary text-sm">Triggered (24h)</p>
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Active Alerts</span>
+            <Bell className="h-4 w-4 text-semantic-success" />
           </div>
-          <p className="text-3xl font-mono font-bold">3</p>
+          <div className="text-3xl font-bold">{alerts.filter(a => a.isActive).length}</div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center gap-2 mb-2">
-            <Mail className="h-5 w-5 text-accent-primary" />
-            <p className="text-text-tertiary text-sm">Notifications Sent</p>
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Triggered (24h)</span>
+            <Bell className="h-4 w-4 text-accent-primary" />
           </div>
-          <p className="text-3xl font-mono font-bold">127</p>
+          <div className="text-3xl font-bold">
+            {alerts.reduce((sum, a) => sum + a.triggerCount, 0)}
+          </div>
         </div>
       </div>
 
-      {/* Alert List */}
-      <div className="glass rounded-xl p-6">
-        <h2 className="text-xl font-bold mb-4">Your Alerts</h2>
-        
-        {alerts.length === 0 ? (
-          <div className="text-center py-12">
-            <Bell className="h-16 w-16 text-text-tertiary mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">No Alerts Yet</h3>
-            <p className="text-text-secondary mb-6">Create your first alert to start monitoring the market</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 rounded-lg bg-accent-primary hover:bg-accent-primary-hover transition-colors"
-            >
-              Create Your First Alert
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {alerts.map(alert => (
-              <div
-                key={alert.id}
-                className="p-4 glass rounded-lg flex items-center justify-between hover:bg-white/5 transition-colors"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${alert.is_active ? 'bg-accent-primary/20' : 'bg-surface-default'}`}>
-                    <Bell className={`h-5 w-5 ${alert.is_active ? 'text-accent-primary' : 'text-text-tertiary'}`} />
+      {alerts.length === 0 ? (
+        <div className="glass rounded-xl p-12 text-center">
+          <Bell className="h-16 w-16 mx-auto mb-4 text-text-tertiary" />
+          <h2 className="text-2xl font-semibold mb-2">No Alerts Yet</h2>
+          <p className="text-text-secondary mb-6">Create your first alert to stay informed</p>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-6 py-3 rounded-lg bg-accent-primary hover:bg-accent-primary-hover transition-colors"
+          >
+            Create Alert
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {alerts.map(alert => (
+            <div key={alert.id} className="glass rounded-xl p-6 hover:bg-white/5 transition-colors">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-semibold">{alert.name}</h3>
+                    <span className="px-2 py-1 rounded bg-background-secondary text-xs font-medium">
+                      {alert.asset}
+                    </span>
+                    {alert.isActive ? (
+                      <span className="px-2 py-1 rounded bg-semantic-success/20 text-semantic-success text-xs font-medium">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded bg-text-tertiary/20 text-text-tertiary text-xs font-medium">
+                        Inactive
+                      </span>
+                    )}
                   </div>
-                  
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">{alert.name}</h3>
-                    <p className="text-sm text-text-secondary">
-                      {alert.asset_id.toUpperCase()} • {' '}
-                      {alert.condition_type === 'price_above' && `Price above $${alert.condition_value.toLocaleString()}`}
-                      {alert.condition_type === 'price_below' && `Price below $${alert.condition_value.toLocaleString()}`}
-                      {alert.condition_type === 'volume_spike' && `Volume spike ${alert.condition_value}% above average`}
-                      {alert.condition_type === 'technical' && `Technical indicator signal`}
-                      {alert.condition_type === 'onchain' && `On-chain metric threshold`}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      {alert.channels.includes('email') && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-accent-primary/20 text-accent-primary flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          Email
-                        </span>
-                      )}
-                      {alert.channels.includes('sms') && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-accent-primary/20 text-accent-primary flex items-center gap-1">
-                          <Smartphone className="h-3 w-3" />
-                          SMS
-                        </span>
-                      )}
-                      {alert.channels.includes('telegram') && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-accent-primary/20 text-accent-primary flex items-center gap-1">
-                          <MessageSquare className="h-3 w-3" />
-                          Telegram
-                        </span>
-                      )}
-                    </div>
+
+                  <div className="flex items-center gap-6 text-sm text-text-secondary mb-4">
+                    <span>
+                      {conditionLabels[alert.condition]} {alert.value.toLocaleString()}
+                    </span>
+                    {alert.lastTriggered && (
+                      <span>Last triggered: {alert.lastTriggered}</span>
+                    )}
+                    <span>Triggered {alert.triggerCount} times</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {alert.channels.map(channel => {
+                      const Icon = channelIcons[channel]
+                      return (
+                        <div
+                          key={channel}
+                          className="flex items-center gap-1 px-3 py-1 rounded-lg glass text-xs"
+                        >
+                          <Icon className="h-3 w-3" />
+                          <span className="capitalize">{channel}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => toggleAlert(alert.id)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      alert.is_active
-                        ? 'bg-semantic-success/20 text-semantic-success'
-                        : 'glass hover:bg-white/10'
-                    }`}
+                    className="p-2 rounded-lg hover:bg-background-tertiary transition-colors"
                   >
-                    {alert.is_active ? 'Active' : 'Paused'}
+                    {alert.isActive ? (
+                      <ToggleRight className="h-5 w-5 text-semantic-success" />
+                    ) : (
+                      <ToggleLeft className="h-5 w-5 text-text-tertiary" />
+                    )}
                   </button>
-                  
-                  <button
-                    onClick={() => setEditingAlert(alert)}
-                    className="p-2 glass hover:bg-white/10 rounded-lg transition-colors"
-                  >
-                    <Edit className="h-4 w-4" />
+                  <button className="p-2 rounded-lg hover:bg-background-tertiary transition-colors">
+                    <Edit2 className="h-4 w-4" />
                   </button>
-                  
                   <button
                     onClick={() => deleteAlert(alert.id)}
-                    className="p-2 glass hover:bg-semantic-error/20 rounded-lg transition-colors text-semantic-error"
+                    className="p-2 rounded-lg hover:bg-semantic-error/20 transition-colors"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 text-semantic-error" />
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Create/Edit Alert Modal */}
-      {(showCreateModal || editingAlert) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="glass rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">
-                {editingAlert ? 'Edit Alert' : 'Create New Alert'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowCreateModal(false)
-                  setEditingAlert(null)
-                }}
-                className="p-2 glass hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
+          ))}
+        </div>
+      )}
 
-            <form className="space-y-4">
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6">Create New Alert</h2>
+
+            <div className="space-y-4">
               <div>
                 <label className="text-sm text-text-secondary mb-2 block">Alert Name</label>
                 <input
                   type="text"
-                  placeholder="e.g., BTC Price Alert"
-                  className="w-full px-4 py-3 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none"
+                  value={newAlert.name}
+                  onChange={(e) => setNewAlert({ ...newAlert, name: e.target.value })}
+                  placeholder="My Alert"
+                  className="w-full px-4 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-text-secondary mb-2 block">Asset</label>
-                  <select className="w-full px-4 py-3 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none">
-                    <option>Bitcoin (BTC)</option>
-                    <option>Ethereum (ETH)</option>
-                    <option>Solana (SOL)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm text-text-secondary mb-2 block">Condition Type</label>
-                  <select className="w-full px-4 py-3 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none">
-                    <option value="price_above">Price Above</option>
-                    <option value="price_below">Price Below</option>
-                    <option value="volume_spike">Volume Spike</option>
-                    <option value="technical">Technical Signal</option>
-                    <option value="onchain">On-Chain Metric</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-sm text-text-secondary mb-2 block">Asset</label>
+                <select
+                  value={newAlert.asset}
+                  onChange={(e) => setNewAlert({ ...newAlert, asset: e.target.value })}
+                  className="w-full px-4 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
+                >
+                  <option value="BTC">Bitcoin (BTC)</option>
+                  <option value="ETH">Ethereum (ETH)</option>
+                  <option value="SOL">Solana (SOL)</option>
+                  <option value="ADA">Cardano (ADA)</option>
+                  <option value="AVAX">Avalanche (AVAX)</option>
+                </select>
               </div>
 
               <div>
-                <label className="text-sm text-text-secondary mb-2 block">Condition Value</label>
+                <label className="text-sm text-text-secondary mb-2 block">Condition</label>
+                <select
+                  value={newAlert.condition}
+                  onChange={(e) => setNewAlert({ ...newAlert, condition: e.target.value })}
+                  className="w-full px-4 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
+                >
+                  <option value="price_above">Price Above</option>
+                  <option value="price_below">Price Below</option>
+                  <option value="volume_spike">Volume Spike (%)</option>
+                  <option value="whale_transaction">Whale Transaction (USD)</option>
+                  <option value="exchange_flow">Exchange Flow Alert</option>
+                  <option value="technical_indicator">Technical Indicator</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm text-text-secondary mb-2 block">Value</label>
                 <input
                   type="number"
-                  placeholder="e.g., 50000"
-                  className="w-full px-4 py-3 bg-surface-default rounded-lg border border-border-subtle focus:border-accent-primary focus:outline-none"
+                  value={newAlert.value}
+                  onChange={(e) => setNewAlert({ ...newAlert, value: e.target.value })}
+                  placeholder="Enter value"
+                  className="w-full px-4 py-2 bg-background-secondary rounded-lg border border-border-default focus:border-accent-primary focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-sm text-text-secondary mb-2 block">Notification Channels</label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-3 p-3 glass rounded-lg cursor-pointer hover:bg-white/5">
-                    <input type="checkbox" className="w-4 h-4" defaultChecked />
-                    <Mail className="h-4 w-4 text-accent-primary" />
-                    <span>Email</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 glass rounded-lg cursor-pointer hover:bg-white/5">
-                    <input type="checkbox" className="w-4 h-4" />
-                    <Smartphone className="h-4 w-4 text-accent-primary" />
-                    <span>SMS</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 glass rounded-lg cursor-pointer hover:bg-white/5">
-                    <input type="checkbox" className="w-4 h-4" />
-                    <MessageSquare className="h-4 w-4 text-accent-primary" />
-                    <span>Telegram</span>
-                  </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['email', 'telegram', 'slack', 'webhook'].map(channel => {
+                    const Icon = channelIcons[channel]
+                    return (
+                      <button
+                        key={channel}
+                        onClick={() => toggleChannel(channel)}
+                        className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                          newAlert.channels.includes(channel)
+                            ? 'border-accent-primary bg-accent-primary/20'
+                            : 'border-border-default hover:border-border-subtle'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="capitalize">{channel}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateModal(false)
-                    setEditingAlert(null)
-                  }}
-                  className="flex-1 px-4 py-3 glass hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-3 bg-accent-primary hover:bg-accent-primary-hover rounded-lg transition-colors"
-                >
-                  {editingAlert ? 'Update Alert' : 'Create Alert'}
-                </button>
-              </div>
-            </form>
+            <div className="flex items-center gap-3 mt-6 pt-6 border-t border-border-subtle">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-border-default hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createAlert}
+                disabled={!newAlert.name || !newAlert.value || newAlert.channels.length === 0}
+                className="flex-1 px-4 py-2 rounded-lg bg-accent-primary hover:bg-accent-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Alert
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Info Section */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="glass rounded-lg p-6">
-          <h3 className="text-lg font-bold mb-3">Alert Types</h3>
-          <div className="space-y-3 text-sm">
-            <div>
-              <strong className="text-accent-primary">Price Alerts:</strong>
-              <p className="text-text-secondary">Get notified when price crosses a specific threshold</p>
-            </div>
-            <div>
-              <strong className="text-accent-primary">Volume Spikes:</strong>
-              <p className="text-text-secondary">Detect unusual trading activity and momentum shifts</p>
-            </div>
-            <div>
-              <strong className="text-accent-primary">Technical Signals:</strong>
-              <p className="text-text-secondary">RSI overbought/oversold, MACD crossovers, etc.</p>
-            </div>
-            <div>
-              <strong className="text-accent-primary">On-Chain Metrics:</strong>
-              <p className="text-text-secondary">Whale movements, exchange flows, network activity</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass rounded-lg p-6">
-          <h3 className="text-lg font-bold mb-3">Notification Channels</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-2">
-              <Mail className="h-5 w-5 text-accent-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Email:</strong>
-                <p className="text-text-secondary">Instant email notifications with detailed alert information</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <Smartphone className="h-5 w-5 text-accent-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>SMS:</strong>
-                <p className="text-text-secondary">Text messages for urgent price movements (Premium)</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <MessageSquare className="h-5 w-5 text-accent-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Telegram:</strong>
-                <p className="text-text-secondary">Real-time messages via Telegram bot (Premium)</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
