@@ -1,4 +1,4 @@
-use client
+'u'use client'
 
 import { useState } from 'react'
 import { Play, TrendingUp, Clock, DollarSign, Target, AlertTriangle, Download, Save } from 'lucide-react'
