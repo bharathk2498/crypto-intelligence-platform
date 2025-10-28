@@ -1,4 +1,4 @@
-use client
+'use clien't
 
 import { useState, useEffect } from 'react'
 import { Plus, TrendingUp, TrendingDown, PieChart, BarChart3, Settings, Download, RefreshCw } from 'lucide-react'
