@@ -2,6 +2,7 @@ import Hero from '@/components/Hero'
 import MarketOverview from '@/components/MarketOverview'
 import FeatureShowcase from '@/components/FeatureShowcase'
 import PricingSection from '@/components/PricingSection'
+import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -16,36 +17,36 @@ export default function Home() {
             <div>
               <h3 className='text-lg font-semibold mb-4'>Products</h3>
               <ul className='space-y-2 text-text-secondary'>
-                <li><a href='/markets' className='hover:text-text-primary'>Markets</a></li>
-                <li><a href='/screener' className='hover:text-text-primary'>Screener</a></li>
-                <li><a href='/portfolio' className='hover:text-text-primary'>Portfolio</a></li>
-                <li><a href='/backtest' className='hover:text-text-primary'>Backtest</a></li>
+                <li><Link href='/markets' className='hover:text-text-primary'>Markets</Link></li>
+                <li><Link href='/screener' className='hover:text-text-primary'>Screener</Link></li>
+                <li><Link href='/portfolio' className='hover:text-text-primary'>Portfolio</Link></li>
+                <li><Link href='/backtest' className='hover:text-text-primary'>Backtest</Link></li>
               </ul>
             </div>
             <div>
               <h3 className='text-lg font-semibold mb-4'>Analytics</h3>
               <ul className='space-y-2 text-text-secondary'>
-                <li><a href='/on-chain' className='hover:text-text-primary'>On-chain</a></li>
-                <li><a href='/defi' className='hover:text-text-primary'>DeFi</a></li>
-                <li><a href='/risk' className='hover:text-text-primary'>Risk</a></li>
-                <li><a href='/alerts' className='hover:text-text-primary'>Alerts</a></li>
+                <li><Link href='/onchain' className='hover:text-text-primary'>On-chain</Link></li>
+                <li><Link href='/defi' className='hover:text-text-primary'>DeFi</Link></li>
+                <li><Link href='/risk' className='hover:text-text-primary'>Risk</Link></li>
+                <li><Link href='/alerts' className='hover:text-text-primary'>Alerts</Link></li>
               </ul>
             </div>
             <div>
               <h3 className='text-lg font-semibold mb-4'>Company</h3>
               <ul className='space-y-2 text-text-secondary'>
-                <li><a href='/about' className='hover:text-text-primary'>About</a></li>
-                <li><a href='/docs' className='hover:text-text-primary'>Docs</a></li>
-                <li><a href='/pricing' className='hover:text-text-primary'>Pricing</a></li>
-                <li><a href='/contact' className='hover:text-text-primary'>Contact</a></li>
+                <li><Link href='/about' className='hover:text-text-primary'>About</Link></li>
+                <li><Link href='/docs' className='hover:text-text-primary'>Docs</Link></li>
+                <li><Link href='/pricing' className='hover:text-text-primary'>Pricing</Link></li>
+                <li><Link href='/contact' className='hover:text-text-primary'>Contact</Link></li>
               </ul>
             </div>
             <div>
               <h3 className='text-lg font-semibold mb-4'>Legal</h3>
               <ul className='space-y-2 text-text-secondary'>
-                <li><a href='/privacy' className='hover:text-text-primary'>Privacy</a></li>
-                <li><a href='/terms' className='hover:text-text-primary'>Terms</a></li>
-                <li><a href='/disclaimer' className='hover:text-text-primary'>Disclaimer</a></li>
+                <li><Link href='/privacy' className='hover:text-text-primary'>Privacy</Link></li>
+                <li><Link href='/terms' className='hover:text-text-primary'>Terms</Link></li>
+                <li><Link href='/disclaimer' className='hover:text-text-primary'>Disclaimer</Link></li>
               </ul>
             </div>
           </div>
